@@ -56,7 +56,7 @@ Example usage:
   [0] python: compute:   [9, 0, 3]
   [3] python: compute:   [7, 7, 5]
   [2] python: compute:   [1, 5, 5]
-  [1] python: results:   12;19;11[1]
+  [1] python: results:   12;19;11
   ...
 
 As shown by the MPI rank prefixes, the Python compute tasks run on different ranks.
