@@ -6,7 +6,7 @@ import random
 import time
 
 def msg(token, s):
-    print("python: %-9s: %s" % (token, s))
+    print("python: %-10s %s" % (token+":", s))
 
 def make_task():
     result = []

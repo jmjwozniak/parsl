@@ -48,15 +48,15 @@ Example usage:
 
   $ swift-t -l -n 5 workflow.swift
   [0] python: new tasks: [6, 1, 6];[5, 1, 6];[4, 0, 4]
-  [1] python: compute  : [5, 1, 6]
-  [2] python: compute  : [6, 1, 6]
-  [3] python: compute  : [4, 0, 4]
-  [0] python: results  : 13;12;8
+  [1] python: compute:   [5, 1, 6]
+  [2] python: compute:   [6, 1, 6]
+  [3] python: compute:   [4, 0, 4]
+  [0] python: results:   13;12;8
   [1] python: new tasks: [9, 0, 3];[7, 7, 5];[1, 5, 5]
-  [0] python: compute  : [9, 0, 3]
-  [3] python: compute  : [7, 7, 5]
-  [2] python: compute  : [1, 5, 5]
-  [1] python: results  : 12;19;11[1]
+  [0] python: compute:   [9, 0, 3]
+  [3] python: compute:   [7, 7, 5]
+  [2] python: compute:   [1, 5, 5]
+  [1] python: results:   12;19;11[1]
   ...
 
 As shown by the MPI rank prefixes, the Python compute tasks run on different ranks.
