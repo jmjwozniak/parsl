@@ -10,6 +10,8 @@ from parsl.executors.swift_t import *
 
 
 def foo(x, y):
+    z = x*y
+    print("Print hi ", z)
     return x*y
 
 def slow_foo(x, y):
@@ -45,16 +47,16 @@ def test_except():
 if __name__ == "__main__":
 
 
-    #test_simple()
-    test_except()
+    test_simple()
+    #test_except()
     exit(0)
     futs = {}
-    for i in range(0,1):
-        futs[i] = tex.submit(slow_foo, 3, 10)
+    for i in range(0,3):
+        futs[i] = tex.submit(foo, 3, 10)
 
 
-    x.result(timeout=10)
-    for x in range(0,10):
+    #x.result(timeout=10)
+    for x in range(0,3):
         print(futs)
         time.sleep(4)
 

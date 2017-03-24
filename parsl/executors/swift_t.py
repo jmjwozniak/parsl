@@ -17,6 +17,8 @@ import multiprocessing as mp
 
 from ipyparallel.serialize import pack_apply_message, unpack_apply_message
 from ipyparallel.serialize import serialize_object, deserialize_object
+#from parsl.executors.serialize import pack_apply_message, unpack_apply_message
+#from parsl.executors.serialize import serialize_object, deserialize_object
 
 import parsl
 from parsl.executors.base import ParslExecutor
@@ -312,6 +314,11 @@ class TurbineExecutor(ParslExecutor):
 
         msg = {"task_id" : task_id,
                "buffer"  : fn_buf }
+
+        import pickle
+        with open("{0}.pkl".format(task_id), 'wb') as f:
+            print("Wrote to file {0}.pkl".format(task_id))
+            pickle.dump(fn_buf, f)
 
         # Post task to the the outgoing queue
         self.Outgoing_Q.put(msg)
