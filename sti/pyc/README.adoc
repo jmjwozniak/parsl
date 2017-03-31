@@ -1,0 +1,25 @@
+
+= Simple C-Python Example
+
+The program is called py-eval.  Its arguments are:
+1. A Python script that is executed with no return value.
+2. A Python expression that returns a string.
+
+This has been tested with Python 2.7.10 and Python 3.6m.
+
+For more verbose output, set verbose=true in py-eval.c
+
+You may need to set environment variable PYTHONHOME at runtime to agree with PYTHON_HOME in the Makefile.
+
+Transcript:
+----
+# edit Makefile for Python installation settings
+make
+export PYTHONHOME=...
+./py-eval py/import-io.py py/hello.py
+----
+
+To test the exception handling capabilities, do:
+----
+./py-eval py/err.py py/hello.py
+----
