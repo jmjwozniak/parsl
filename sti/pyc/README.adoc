@@ -28,7 +28,8 @@ To test the exception handling capabilities, do:
 
 To test the _New Python Interpreter_ feature, compare:
 ----
-./py-eval py/x2.py py/print_x.py py/hello.py 
+cd py
+../py-eval x2.py print_x.py hello.py
 2
 'Hello'
 ----
@@ -36,7 +37,8 @@ To test the _New Python Interpreter_ feature, compare:
 with the same thing with added - :
 
 ----
-./py-eval py/x2.py - py/print_x.py py/hello.py
+cd py
+../py-eval x2.py - print_x.py hello.py
 
 PYTHON EXCEPTION:
 <class 'NameError'>
