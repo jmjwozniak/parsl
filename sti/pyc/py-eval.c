@@ -83,24 +83,26 @@ static char* python_result_default = "NOTHING";
    @param persist: If true, retain the Python interpreter,
                    else finalize it
    @param code: The multiline string of Python code.
-                The last line is evaluated to the returned result
-   @param output: Store result pointer here
+
    @return true on success, false on error
  */
 bool
-python_eval(bool persist, const char* code, const char* expr,
-            char** output)
+python_code(const char* code)
 {
-  char* result = python_result_default;
-
-  // Initialize:
-  bool rc = python_init();
-  if (!rc) return false;
-
   // Execute code:
   verbose("python: code: %s", code);
   PyRun_String(code, Py_file_input, main_dict, local_dict);
   if (PyErr_Occurred()) return handle_python_exception();
+  return true;
+}
+
+/**
+   The expr is evaluated to the returned result
+   @param output: Store result pointer here
+*/
+bool python_eval(const char* expr, char** output)
+{
+  char* result = python_result_default;
 
   // Evaluate expression:
   verbose("python: expr: %s", expr);
@@ -115,8 +117,15 @@ python_eval(bool persist, const char* code, const char* expr,
 
   // Clean up and return:
   Py_DECREF(o);
-  if (!persist) python_finalize();
+
   return true;
+}
+
+bool
+python_reset()
+{
+  python_finalize();
+  return python_init();
 }
 
 void

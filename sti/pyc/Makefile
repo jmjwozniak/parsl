@@ -16,7 +16,7 @@ INCLUDES = -I $(PYTHON_HOME)/include/python$(PYTHON_VERSION)
 LIBS     = -L $(PYTHON_HOME)/lib -lpython$(PYTHON_VERSION)
 RPATHS   = -Wl,-rpath -Wl,$(PYTHON_HOME)/lib
 
-CFLAGS = -g -Wall -O0 -fPIC -DPYTHON_VERSION_MAJOR=$(PYTHON_VERSION_MAJOR) $(INCLUDES)
+CFLAGS = -g -Wall -O0 -fPIC -DPYTHON_VERSION_MAJOR=$(PYTHON_VERSION_MAJOR) $(INCLUDES) -fdiagnostics-color=always
 
 SRCS = main.c py-eval.c io.c
 OBJS = $(patsubst %.c,%.o,$(SRCS))

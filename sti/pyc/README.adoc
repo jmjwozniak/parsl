@@ -2,8 +2,9 @@
 = Simple C-Python Example
 
 The program is called py-eval.  Its arguments are:
-1. A Python script that is executed with no return value.
-2. A Python expression that returns a string.
+1. Zero or more Python scripts that are executed with no return value.
+2. Any number of tokens - , which provides a new Python interpreter at each point.
+2. Exactly one Python script that returns a string.
 
 This has been tested with Python 2.7.10 and Python 3.6m.
 
@@ -22,4 +23,22 @@ export PYTHONHOME=...
 To test the exception handling capabilities, do:
 ----
 ./py-eval py/err.py py/hello.py
+----
+
+To test the new Python interpreter feature, compare:
+----
+./py-eval py/x2.py py/print_x.py py/hello.py 
+2
+'Hello'
+----
+
+with the same thing with added - :
+
+----
+./py-eval py/x2.py - py/print_x.py py/hello.py
+
+PYTHON EXCEPTION:
+<class 'NameError'>
+name 'x' is not defined
+py-eval: python code failed.
 ----
