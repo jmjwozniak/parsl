@@ -1,10 +1,11 @@
+
 # SWIFT_E.PY
 # Pretend Swift/E controller for Swift/T
 
 import random
 import time
 import pickle
-from serialize import unpack_apply_message
+from ipyparallel.serialize import pack_apply_message, unpack_apply_message
 #from serialize import serialize_object, deserialize_object
 
 def msg(token, s):
@@ -17,10 +18,9 @@ def make_task():
     return result
 
 def get_tasks():
-    with open('/home/yadu/src/parsl/parsl/tests/181487ca-9791-4eb4-9431-b7fe9d69b968.pkl', 'rb') as f:
-        task = f.read()
-        msg("New task : ", task)
-        return str(task)
+    with open('/scratch/midway/yadunand/swift-e-lab/sti/1/5cbd919b-e875-4c8f-9f05-e16acb360d0e.pkl', 'rb') as f:
+        data = pickle.load(f)
+        return str(data)
 
 
     '''
@@ -34,7 +34,7 @@ def get_tasks():
     return result
     '''
 
-def task(bufs):
+def task(string_bufs):
     """ Executor.
     Args: name of the inputfile, which is a pickled object that contains
     the function to be executed, it's args, kwargs etc.
@@ -47,6 +47,11 @@ def task(bufs):
     user_ns.update( {'__builtins__' : {k : getattr(__builtins__, k)  for k in all_names} } )
 
     bufs = None
+    with open('/scratch/midway/yadunand/swift-e-lab/sti/1/5cbd919b-e875-4c8f-9f05-e16acb360d0e.pkl', 'rb') as f:
+        bufs = pickle.load(f)
+
+    bufs = bytes(string_bufs, 'utf-8')
+    print(bufs)
 
     f, args, kwargs = unpack_apply_message(bufs, user_ns, copy=False)
 
@@ -92,3 +97,34 @@ def task(arguments):
 def put_results(results):
     msg("results", results)
     return ""
+
+
+if __name__ == '__main__' :
+
+    bufs = None
+    with open('/scratch/midway/yadunand/swift-e-lab/sti/1/5cbd919b-e875-4c8f-9f05-e16acb360d0e.pkl', 'rb') as f:
+        # Bufs is in bytes
+        bufs = pickle.load(f)
+        sbuf = pickle.dumps(bufs)
+
+    print("String sbuf")
+    print(str(sbuf))
+
+    
+    if str(sbuf) == sbuf :
+        print("Equal")
+    else:
+        print("Not equal")
+        print("bufs: \n", bufs)
+        print("bsbufs: \n", sbuf)
+
+
+    if bufs == str(bufs, 'utf-8'):
+        print("Equal")
+    else:
+        print("Not equal")
+        print("bufs: \n", bufs)
+        print("bsbufs: \n", sbuf)
+
+    ##string_buf = get_tasks()
+    #print(task(str(bufs)))
