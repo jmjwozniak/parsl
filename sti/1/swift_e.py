@@ -5,7 +5,10 @@
 import random
 import time
 import pickle
+import logging
 from ipyparallel.serialize import pack_apply_message, unpack_apply_message
+from base64 import b64encode, b64decode
+
 #from serialize import serialize_object, deserialize_object
 
 def msg(token, s):
@@ -19,20 +22,10 @@ def make_task():
 
 def get_tasks():
     with open('/scratch/midway/yadunand/swift-e-lab/sti/1/5cbd919b-e875-4c8f-9f05-e16acb360d0e.pkl', 'rb') as f:
-        data = pickle.load(f)
-        return str(data)
+        buf  = f.read()
+        sbuf = str(b64encode(buf))
 
-
-    '''
-    task_strings = []
-    for i in range(0,3):
-        task = make_task()
-        task_string = str(task)
-        task_strings.append(task_string)
-    result = ";".join(task_strings)
-    msg("new tasks", result)
-    return result
-    '''
+        return sbuf
 
 def task(string_bufs):
     """ Executor.
@@ -42,16 +35,12 @@ def task(string_bufs):
     be pickled are written
 
     """
+    d = eval(string_bufs)
+    bufs = pickle.loads(b64decode(d))
+
     all_names = dir(__builtins__)
     user_ns   = locals()
     user_ns.update( {'__builtins__' : {k : getattr(__builtins__, k)  for k in all_names} } )
-
-    bufs = None
-    with open('/scratch/midway/yadunand/swift-e-lab/sti/1/5cbd919b-e875-4c8f-9f05-e16acb360d0e.pkl', 'rb') as f:
-        bufs = pickle.load(f)
-
-    bufs = bytes(string_bufs, 'utf-8')
-    print(bufs)
 
     f, args, kwargs = unpack_apply_message(bufs, user_ns, copy=False)
 
@@ -80,13 +69,18 @@ def task(string_bufs):
         exec(code, user_ns, user_ns)
 
     except Exception as e:
-        logger.warn("Caught errors but will not handled %s", e)
-        return e
+        logging.warn("Caught errors but will not handled %s", e)
+        #return e
+        ret_value = e
 
     else :
         #print("Done : {0}".format(locals()))
         print("[RUNNER] Result    : {0}".format(user_ns.get(resultname)))
-        return user_ns.get(resultname)
+        #return user_ns.get(resultname)
+        ret_value = user_ns.get(resultname)
+
+    ret_sbuf = pickle.dumps(ret_value)
+    return str(b64encode(ret_sbuf))
 
 '''
 def task(arguments):
@@ -99,32 +93,16 @@ def put_results(results):
     return ""
 
 
-if __name__ == '__main__' :
 
-    bufs = None
-    with open('/scratch/midway/yadunand/swift-e-lab/sti/1/5cbd919b-e875-4c8f-9f05-e16acb360d0e.pkl', 'rb') as f:
-        # Bufs is in bytes
-        bufs = pickle.load(f)
-        sbuf = pickle.dumps(bufs)
+if __name__ == "__main__":
 
-    print("String sbuf")
-    print(str(sbuf))
+    sbuf = get_tasks()
+    print("Got sbuf from get_task : ", type(sbuf))
 
-    
-    if str(sbuf) == sbuf :
-        print("Equal")
-    else:
-        print("Not equal")
-        print("bufs: \n", bufs)
-        print("bsbufs: \n", sbuf)
+    r = task(sbuf)
+    print("Got result from task : ", type(r))
 
+    rbuf = eval(r)
+    result = pickle.loads(b64decode(rbuf))
+    print("Decoded result : ", result)
 
-    if bufs == str(bufs, 'utf-8'):
-        print("Equal")
-    else:
-        print("Not equal")
-        print("bufs: \n", bufs)
-        print("bsbufs: \n", sbuf)
-
-    ##string_buf = get_tasks()
-    #print(task(str(bufs)))
