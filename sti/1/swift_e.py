@@ -35,17 +35,29 @@ def task(string_bufs):
     be pickled are written
 
     """
+    #all_names = dir(__builtins__)
+    user_ns   = globals()#locals()
+    #user_ns.update( {'__builtins__' : {k : getattr(__builtins__, k)  for k in all_names} } )
+
+    log = open("debug.log", 'w+')
+
     d = eval(string_bufs)
     bufs = pickle.loads(b64decode(d))
 
-    all_names = dir(__builtins__)
-    user_ns   = locals()
-    user_ns.update( {'__builtins__' : {k : getattr(__builtins__, k)  for k in all_names} } )
+
+    log.write("User_ns : \n")
+    for key in user_ns.keys():
+        log.write("    key:{0} value:{1}\n".format(key, user_ns[key]))
+
+    log.write( "Got bufs : {0}\n".format( bufs ))
+
 
     f, args, kwargs = unpack_apply_message(bufs, user_ns, copy=False)
 
-    print(f)
-    print(args)
+    log.write( "Got f : {0}\n".format( f ))
+    log.write( "Got args : {0}\n".format( args ))
+    log.write( "Got kwargs : {0}\n".format( kwargs ))
+
 
     #x = f(*args,**kwargs)
     #print(x)
@@ -64,6 +76,9 @@ def task(string_bufs):
     code = "{0} = {1}(*{2}, **{3})".format(resultname, fname,
                                            argname, kwargname)
 
+
+    log.write("Executing code : {0}\n".format(code))
+
     try:
         print("[RUNNER] Executing : {0}".format(code))
         exec(code, user_ns, user_ns)
@@ -71,6 +86,9 @@ def task(string_bufs):
     except Exception as e:
         logging.warn("Caught errors but will not handled %s", e)
         #return e
+        log.write("Caught exception in  code :{0} \n".format(e))
+        log.close()
+
         ret_value = e
 
     else :
@@ -79,8 +97,14 @@ def task(string_bufs):
         #return user_ns.get(resultname)
         ret_value = user_ns.get(resultname)
 
+
     ret_sbuf = pickle.dumps(ret_value)
-    return str(b64encode(ret_sbuf))
+    ret_encoded = str(b64encode(ret_sbuf))
+
+    log.write("Returning : {0}\n".format(ret_encoded))
+    log.write("type      : {0}\n".format(type(ret_encoded)))
+    log.close()
+    return ret_encoded
 
 '''
 def task(arguments):
