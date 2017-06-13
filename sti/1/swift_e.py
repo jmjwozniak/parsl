@@ -23,20 +23,48 @@ from ipyparallel.serialize import serialize_object, deserialize_object
 
 import parsl
 from parsl.executors.base import ParslExecutor
+import zmq_pipes
 
 logger = logging.getLogger(__name__)
 
 BUFFER_THRESHOLD = 1024*1024
 ITEM_THRESHOLD = 1024
 
+'''
 Task_Q = Queue()
 Results_Q = Queue()
+'''
+Task_Q = None
+Results_Q = None
+
+
 
 def msg(token, s):
     print("python: %-10s %s" % (token+":", s))
 
-def make_tasks(count):
+def make_queues(jobs_q_url, results_q_url):
+
     global Task_Q
+    global Results_Q
+    print ("Jobs q : ", jobs_q_url)
+    print ("Results q : ", results_q_url)
+
+    Task_Q = zmq_pipes.JobsQIncoming(jobs_q_url)
+    Results_Q = zmq_pipes.ResultsQOutgoing(results_q_url)
+
+    return str(jobs_q_url)
+
+
+def make_tasks(count):
+
+    global Task_Q
+    global Results_Q
+
+    Task_Q = Queue()
+    Results_Q = Queue()
+
+    #print ("Jobs q : ", jobs_q_url)
+    #print ("Results q : ", results_q_url)
 
     try:
         result = None
@@ -44,6 +72,7 @@ def make_tasks(count):
             result = str(b64encode(f.read()))
 
         for i in range(0, count):
+            print("Putting task")
             Task_Q.put(result)
         Task_Q.put("DONE")
 
@@ -53,6 +82,10 @@ def make_tasks(count):
     return str(Task_Q)
 
 def get_tasks():
+    ''' Get task received an serialized object comprised of [fn, args, kwargs]
+    this serialized object is b64encoded here and returned as a string
+
+    '''
 
     '''[TODO] Bad code, refactor
     '''
@@ -61,11 +94,11 @@ def get_tasks():
     print("Task_Q get called")
     result = None
     try:
-        #time.sleep(1)
-        result = Task_Q.get(timeout=1)
-        return result
-        #with  open("131c58b1-ff2d-4b79-8dd7-b64f5f8d6b81.pkl", 'rb') as f:
-        #    result = str(b64encode(f.read()))
+        result = Task_Q.get(timeout=4)
+
+        encoded_buf = str(b64encode(pickle.dumps(result)))
+
+        return str(encoded_buf)
 
     except queue.Empty:
         #return str(Task_Q)
@@ -82,27 +115,39 @@ def task(string_bufs):
     be pickled are written
 
     """
+
+    #time.sleep(0.05)
     #all_names = dir(__builtins__)
     user_ns   = globals()#locals()
     #user_ns.update( {'__builtins__' : {k : getattr(__builtins__, k)  for k in all_names} } )
 
     log = open("debug.log", 'w+')
-
-    d = eval(string_bufs)
-
-    bufs = pickle.loads(b64decode(d))
-
-    task_id = bufs['task_id']
-
     log.write("User_ns : \n")
 
+    encoded_bufs = eval(string_bufs)
+    log.write("Encoded bufs : {0}\n".format( encoded_bufs))
+
+    bufs = b64decode(string_bufs)
+    log.write("decoded bufs : {0}\n".format(bufs))
+    log.write("decoded bufs type : {0}\n".format(type(bufs)))
+
+
+
+    #log.close()
     for key in user_ns.keys():
         log.write("    key:{0} value:{1}\n".format(key, user_ns[key]))
 
     log.write( "Got bufs : {0}\n".format( bufs ))
 
+    try:
+        f, args, kwargs = unpack_apply_message(bufs, user_ns, copy=False)
 
-    f, args, kwargs = unpack_apply_message(bufs['buffer'], user_ns, copy=False)
+    except Exception as e:
+        return "Caught error : {0}".format(e)
+
+    return "foo"
+    #log.close()
+    #task_id = kwargs["task_id"]
 
     log.write( "Got f : {0}\n".format( f ))
     log.write( "Got args : {0}\n".format( args ))
@@ -150,7 +195,10 @@ def task(string_bufs):
         ret_value = user_ns.get(resultname)
 
 
-    ret_sbuf = pickle.dumps(ret_value)
+    return_data = {'task_id' : task_id,
+                   'returns' : ret_value}
+
+    ret_sbuf = pickle.dumps(return_data)
     ret_encoded = b64encode(ret_sbuf)
 
     print ("Pickled : ", ret_sbuf)
@@ -167,130 +215,6 @@ def put_results(results):
     #time.sleep(1)
     result = Results_Q.put(results)
     return "True"
-
-
-
-def runner(incoming_q, outgoing_q):
-    ''' This is a function that mocks the Swift-T side. It listens on the the incoming_q for tasks
-    and posts returns on the outgoing_q
-
-    Args:
-         - incoming_q (Queue object) : The queue to listen on
-         - outgoing_q (Queue object) : Queue to post results on
-
-    The messages posted on the incoming_q will be of the form :
-
-    {
-      "task_id" : <uuid.uuid4 string>,
-      "buffer"  : serialized buffer containing the fn, args and kwargs
-    }
-
-    If ``None`` is received, the runner will exit.
-
-    Response messages should be of the form:
-
-    {
-      "task_id" : <uuid.uuid4 string>,
-      "result"  : serialized buffer containing result
-      "exception" : serialized exception object
-    }
-
-    On exiting the runner will post ``None`` to the outgoing_q
-
-    '''
-    logger.debug("[RUNNER] Starting")
-
-    def execute_task(bufs):
-        ''' Deserialize the buf, and execute the task.
-        Returns the serialized result/exception
-        '''
-        all_names = dir(__builtins__)
-        user_ns   = locals()
-        user_ns.update( {'__builtins__' : {k : getattr(__builtins__, k)  for k in all_names} } )
-
-        f, args, kwargs = unpack_apply_message(bufs, user_ns, copy=False)
-
-        fname = getattr(f, '__name__', 'f')
-        prefix     = "parsl_"
-        fname      = prefix+"f"
-        argname    = prefix+"args"
-        kwargname  = prefix+"kwargs"
-        resultname = prefix+"result"
-
-        user_ns.update({ fname : f,
-                         argname : args,
-                         kwargname : kwargs,
-                         resultname : resultname })
-
-        code = "{0} = {1}(*{2}, **{3})".format(resultname, fname,
-                                               argname, kwargname)
-
-        try:
-
-            print("[RUNNER] Executing : {0}".format(code))
-            exec(code, user_ns, user_ns)
-
-        except Exception as e:
-            logger.warn("Caught errors but will not handled %s", e)
-            raise e
-
-        else :
-            #print("Done : {0}".format(locals()))
-            print("[RUNNER] Result    : {0}".format(user_ns.get(resultname)))
-            return user_ns.get(resultname)
-
-
-    while True :
-        try:
-            # Blocking wait on the queue
-            msg = incoming_q.get(block=True, timeout=10)
-            #logger.debug("[RUNNER] Got message : %s", msg)
-
-        except queue.Empty as e:
-            # Handle case where no items were on queue
-            logger.debug("[RUNNER] got nothing")
-            pass
-
-        except IOError as e:
-            logger.debug("[RUNNER] broken pipe, error: %s", e)
-            try:
-                # Attempt to send a stop notification to the management thread
-                outgoing_q.put(None)
-            except Exception as e:
-                pass
-            break
-
-        except Exception as e:
-            logger.debug("[RUNNER] caught unknown exception : %s", e)
-            pass
-
-        else:
-            # Handle received message
-            if not msg :
-                # Empty message is a die request
-                logger.debug("[RUNNER] Received exit request")
-                outgoing_q.put(None)
-                break
-            else:
-                # Received a valid message, handle it
-                logger.debug("[RUNNER] Got a valid task : %s", msg["task_id"])
-                try:
-                    response_obj = execute_task(msg['buffer'])
-                    response = {"task_id" : msg["task_id"],
-                                "result"  : serialize_object(response_obj)}
-
-                    logger.warn("[RUNNER] Returing result : %s",
-                                deserialize_object(response["result"]) )
-
-                except Exception as e:
-                    logger.debug("[RUNNER] Caught task exception")
-                    response = {"task_id" : msg["task_id"],
-                                "exception"  : serialize_object(e)}
-
-                outgoing_q.put(response)
-
-    logger.debug("[RUNNER] Terminating")
-
 
 class TurbineExecutor(ParslExecutor):
     ''' The Turbine executor. Bypass the Swift/T language and run on top off the Turbine engines
@@ -414,20 +338,20 @@ class TurbineExecutor(ParslExecutor):
         self.worker.join()
         return True
 
-    def __init__ (self, max_workers=2, thread_name_prefix=''):
+    def __init__ (self, max_workers=2, thread_name_prefix='', jobs_q_url=None, results_q_url=None):
         ''' Initialize the thread pool
         Trying to implement the emews model.
 
         '''
+
         logger.debug("In __init__")
         self.mp_manager = mp.Manager()
 
-        global Task_Q ; #Task_Q = Queue()
-        global Results_Q ; #Results_Q = Queue()
         #self.Outgoing_Q = self.mp_manager.Queue()
-        self.Outgoing_Q = Task_Q
+        self.Outgoing_Q = zmq_pipes.JobsQOutgoing(jobs_q_url)
         #self.Incoming_Q = self.mp_manager.Queue()
-        self.Incoming_Q = Results_Q
+        #self.Incoming_Q = Results_Q
+        self.Incoming_Q = zmq_pipes.ResultsQIncoming(results_q_url)
         self.isAlive   = True
 
         self._queue_management_thread = None
@@ -447,23 +371,28 @@ class TurbineExecutor(ParslExecutor):
         Returns:
               Future
         '''
-        task_id = uuid.uuid4()
+        task_id = str(uuid.uuid4())
 
         logger.debug("Before pushing to queue : func:%s func_args:%s", func, args)
 
         self.tasks[task_id] = Future()
 
+        # This is a really bad hack
+        #kwargs['task_id'] = task_id
+
+
         fn_buf  = pack_apply_message(func, args, kwargs,
                                      buffer_threshold=1024*1024,
                                      item_threshold=1024)
 
-        msg = {"task_id" : task_id,
-               "buffer"  : fn_buf }
+
+        msg = {'task_id' : task_id,
+               'bufs' : fn_buf}
         '''
         import pickle
         with open("{0}.pkl".format(task_id), 'wb') as f:
             print("Wrote to file {0}.pkl".format(task_id))
-            pickle.dump(msg, f)
+            pickle.dump(fn_buf, f)
         '''
 
         # Post task to the the outgoing queue

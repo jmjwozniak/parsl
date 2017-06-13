@@ -1,5 +1,26 @@
+Swift-T Interface New
+=====================
 
-Swift/T Interface 1
+This is Parsl over Swift-T prototype. Parsl and Swift-T run on individual processes with all IPC going
+over 0mq. The 0mq code is `zmq_pipe.py`.
+
+
+How to run
+----------
+
+The setup_env.sh brings the right codes into the run environment on midway:
+
+>>> . setup_env.sh
+
+Then we need to start the python code
+
+>>> python3 test.py
+
+This piece starts the 0mq pipes and pushes the 
+
+
+
+Swift/T Interface 1 OLD
 ===================
 
 This workflow demonstrates the simplest way to let Python control a Swift/T workflow.

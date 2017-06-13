@@ -7,8 +7,17 @@ import string;
 import python;
 //import location;
 
+pragma worktypedef slaves;
+
+
 (string output) python_r0(string code, string expr) "turbine" "0.1.0"
 [ "set <<output>> [ turbine::python 1 <<code>> <<expr>> ]" ];
+
+/*
+@dispatch=slaves
+(string output) python_persist(string code, string expr) "turbine" "0.1.0"
+[ "set <<output>> [ turbine::python 1 <<code>> <<expr>> ]" ];
+*/
 
 /*
 (string output) python_r0_worker(string code, string expr) "turbine" "0.1.0"
@@ -21,16 +30,22 @@ import python;
 
 (string result) task(string arguments)
 {
-    result = python_persist("import swift_e",
+    result = python_r0("import swift_e",
                             "repr(swift_e.task(\"%s\"))" % arguments) =>
         printf("task returned : %s", result);
 }
 
 (boolean result) run_tasks(string taskstring)
 {
+    /*
     return_val = task(taskstring) =>
         put_results(return_val) =>
-        result = true;
+        result = true => trace("Finished run");
+    */
+
+    return_val = task(taskstring) => trace("Return received : %s" % return_val) => result= true;
+    //put_results(return_val) =>
+    //    result = true => trace("Finished run");
 }
 
 
@@ -54,12 +69,19 @@ import python;
 (boolean result ) make_tasks(int count)
 {
     qname = python_r0("import swift_e",
-                           "swift_e.make_tasks(%d)" % count) =>
+                      "swift_e.make_tasks(%d)" % count) =>
         printf("Qname from maketasks : %s", qname) =>
         result = true;
 }
 
-
+(boolean result ) make_queues (string jobs_q, string results_q)
+{
+    qname = python_r0("import swift_e",
+                      "swift_e.make_queues(\"%s\", \"%s\")" % (jobs_q, results_q)) =>
+        //"swift_e.make_queues('tcp://127.0.0.1:5557' , 'tcp://127.0.0.1:5558')") =>
+        printf("Qname from maketasks : %s", qname) =>
+        result = true;
+}
 
 
 loop(int jobmax) {
@@ -68,44 +90,20 @@ loop(int jobmax) {
     //for (boolean b = true; b; b=c) {
 
         boolean c;
-        tasks = get_tasks() ;//=> printf("Got task: %s", tasks);
+        tasks = get_tasks() => printf("Got task: %s", tasks);
         if (tasks == "DONE") {
 
             c = false;
 
         } else {
-
-            c = run_tasks(tasks) ;//=> printf("Task status : %i", c);
+             trace("Run tasks %s " % tasks);
+             c = run_tasks(tasks) ;//=> printf("Task status : %i", c);
 
         }
     }
 }
 
-int jobmax = 30;
+int jobmax = 100;
 
-make_tasks(jobmax) => loop(jobmax);
-
-
-/*
-loop()
-{
-    for (boolean b = true; b; b=c)
-        {
-            boolean c;
-            tasks = get_tasks() => printf("Got task: %s", tasks);
-
-            if (tasks == "DONE")
-                {
-                    c = false;
-                }
-            else
-                {
-                    c = run_tasks(tasks) => printf("Task returned: %s", c);
-
-                }
-
-        }
-}
-
-loop();
-*/
+//make_tasks(jobmax) => loop(jobmax);
+make_queues("tcp://127.0.0.1:5557", "tcp://127.0.0.1:5558")  => loop(jobmax);
