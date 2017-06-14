@@ -19,20 +19,6 @@ class JobsQOutgoing(object):
         #self.zmq_socket.send_json(message)
 
 
-class ResultsQIncoming(object):
-
-    def __init__ (self, results_q):
-        self.results_q = results_q
-
-        self.context = zmq.Context()
-        self.results_receiver = self.context.socket(zmq.PULL)
-        self.results_receiver.bind(self.results_q)
-
-    def get(self, timeout=None):
-        #result = self.results_receiver.recv_json()
-        result = self.results_receiver.recv_pyobj()
-        return result
-
 class JobsQIncoming(object):
 
     def __init__ (self, task_url, server_id=None):
@@ -50,6 +36,21 @@ class JobsQIncoming(object):
     def get(self, timeout=None):
         work = self.task_q.recv_pyobj()
         return work
+
+class ResultsQIncoming(object):
+
+    def __init__ (self, results_q):
+        self.results_q = results_q
+
+        self.context = zmq.Context()
+        self.results_receiver = self.context.socket(zmq.PULL)
+        self.results_receiver.bind(self.results_q)
+
+    def get(self, timeout=None):
+        #result = self.results_receiver.recv_json()
+        result = self.results_receiver.recv_pyobj()
+        return result
+
 
 class ResultsQOutgoing(object):
 
