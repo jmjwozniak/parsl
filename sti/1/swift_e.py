@@ -18,8 +18,6 @@ import pickle
 from base64 import b64encode, b64decode
 from ipyparallel.serialize import pack_apply_message, unpack_apply_message
 from ipyparallel.serialize import serialize_object, deserialize_object
-#from parsl.executors.serialize import pack_apply_message, unpack_apply_message
-#from parsl.executors.serialize import serialize_object, deserialize_object
 
 import parsl
 from parsl.executors.base import ParslExecutor
@@ -36,7 +34,6 @@ Results_Q = Queue()
 '''
 Task_Q = None
 Results_Q = None
-
 
 
 def msg(token, s):
@@ -127,13 +124,14 @@ def task(string_bufs):
     encoded_bufs = eval(string_bufs)
     log.write("Encoded bufs : {0}\n".format( encoded_bufs))
 
-    bufs = b64decode(string_bufs)
+    msg = pickle.loads(b64decode(encoded_bufs))
+
+    task_id = msg['task_id']
+    bufs = msg['bufs']
+
+    log.write("decoded task_id : {0}\n".format(task_id))
     log.write("decoded bufs : {0}\n".format(bufs))
-    log.write("decoded bufs type : {0}\n".format(type(bufs)))
 
-
-
-    #log.close()
     for key in user_ns.keys():
         log.write("    key:{0} value:{1}\n".format(key, user_ns[key]))
 
@@ -145,7 +143,6 @@ def task(string_bufs):
     except Exception as e:
         return "Caught error : {0}".format(e)
 
-    return "foo"
     #log.close()
     #task_id = kwargs["task_id"]
 
@@ -211,7 +208,6 @@ def task(string_bufs):
 
 def put_results(results):
     global Results_Q
-    print("Results_Q got called")
     #time.sleep(1)
     result = Results_Q.put(results)
     return "True"
@@ -267,13 +263,18 @@ class TurbineExecutor(ParslExecutor):
         None
 
         '''
+        self.Incoming_Q = zmq_pipes.ResultsQIncoming(self.results_q_url)
+
         while True:
+            #print("Thread is active ", self.Incoming_Q)
             logger.debug("[MTHREAD] Management thread active")
             try:
-                msg = self.Incoming_Q.get(block=True, timeout=1)
+                msg = self.Incoming_Q.get()
+                #print("Got msg : ", msg)
 
             except queue.Empty as e:
                 # timed out.
+                print("Timeout")
                 pass
 
             except IOError as e:
@@ -281,22 +282,35 @@ class TurbineExecutor(ParslExecutor):
                 return
 
             except Exception as e:
-                logger.debug("[MTHREAD] caught unknown exception : %s", e)
+                #logger.debug("[MTHREAD] caught unknown exception : %s", e)
+                print("[MTHREAD] caught unknown exception : %s", e)
                 pass
 
             else:
+
                 if msg == None:
                     logger.debug("[MTHREAD] Got None")
                     return
                 else:
-                    logger.debug("[MTHREAD] Got message : %s", msg)
-                    task_fut = self.tasks[msg['task_id']]
-                    if 'result' in msg:
-                        result, remainder = deserialize_object(msg['result'])
+
+                    d_msg = pickle.loads(b64decode(eval(msg)))
+
+                    #print("DESERIALIZED : ", d_msg)
+
+                    logger.debug("[MTHREAD] Got message : %s", d_msg)
+                    task_fut = self.tasks[d_msg['task_id']]
+
+                    if 'returns' in d_msg:
+                        # TODO : More work on returns serialized objects rather
+                        # than simple pickling
+                        #result, remainder = deserialize_object(d_msg['returns'])
+                        result = d_msg["returns"]
                         task_fut.set_result(result)
 
-                    elif 'exception' in msg:
-                        exception, remainder = deserialize_object(msg['exception'])
+                    elif 'exception' in d_msg:
+                        # TODO : This section is not implemented properly
+                        #exception, remainder = deserialize_object(d_msg['exception'])
+                        exception = d_msg['exception']
                         task_fut.set_exception(exception)
 
             if not self.isAlive:
@@ -346,16 +360,18 @@ class TurbineExecutor(ParslExecutor):
 
         logger.debug("In __init__")
         self.mp_manager = mp.Manager()
-
+        self.jobs_q_url = jobs_q_url
+        self.results_q_url = results_q_url
         #self.Outgoing_Q = self.mp_manager.Queue()
         self.Outgoing_Q = zmq_pipes.JobsQOutgoing(jobs_q_url)
         #self.Incoming_Q = self.mp_manager.Queue()
         #self.Incoming_Q = Results_Q
-        self.Incoming_Q = zmq_pipes.ResultsQIncoming(results_q_url)
+        #self.Incoming_Q = zmq_pipes.ResultsQIncoming(results_q_url)
         self.isAlive   = True
 
         self._queue_management_thread = None
         self._start_queue_management_thread()
+
         logger.debug("Created management thread : %s", self._queue_management_thread)
 
         #self.worker  = mp.Process(target=runner, args = (self.Outgoing_Q, self.Incoming_Q))
