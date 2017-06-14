@@ -18,7 +18,7 @@ workers = TurbineExecutor(jobs_q_url="tcp://127.0.0.1:5557",
 
 @App('python', workers)
 def double(x):
-    return x*5
+    return x*2
 
 
 def foo():
@@ -63,6 +63,10 @@ if __name__ == '__main__' :
 
     x = parallel_for(int(args.count))
 
-    print ([i.result() for i in x])
+    final = [i.result() for i in x]
+    print(final)
+
+    assert final == [i*2 for i in range(0, int(args.count)) ]
+
     #raise_error(0)
 
