@@ -12,11 +12,20 @@ The setup_env.sh brings the right codes into the run environment on midway:
 
 >>> . setup_env.sh
 
-Then we need to start the python code
+This setup script also sets up the following env variables which are picked up by Swift-t:
+
+>>> export TURBINE_LOG=1
+>>> export TURBINE_CONTROLLER_WORKERS=1
+>>> export TURBINE_SLAVES_WORKERS=4
+
+Run the swift-t in executor flow
+
+>>> swift-t -l -n 6 executor.swift
+
+Then we start the python code, that launches tasks
 
 >>> python3 test.py
 
-This piece starts the 0mq pipes and pushes the 
 
 
 
