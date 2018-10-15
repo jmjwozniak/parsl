@@ -9,22 +9,22 @@ Examples
 
 Use ``make`` to build ``master.x``
 
-* ``$ python child.py``
+- ``$ python child.py``
   
   will consume memory forever, possibly crashing your system
-
-* ``$ ./master.x python child.py``
+  
+- ``$ ./master.x python child.py``
   
   will limit Python to 16 MB RAM; Python will exit with ``MemoryError``
 
-* ``master.py``
+- ``master.py``
   
-   limits itself to 16 MB RAM.  You have to edit it to select whether to
-   launch ``child.py`` or not:
+  limits itself to 16 MB RAM.  You have to edit it to select whether to
+  launch ``child.py`` or not:
   
-   * ``master.py`` exits correctly with ``MemoryError``
+  - ``master.py`` exits correctly with ``MemoryError``
      when limiting its own memory use
-   * ``master.py`` limits the memory use of its subprocess ``child.py``,
+  - ``master.py`` limits the memory use of its subprocess ``child.py``,
      causing it to trigger a ``MemoryError``, which can be caught at the
      ``master.py`` level
 
