@@ -19,14 +19,14 @@ Use ``make`` to build ``master.x``
 
 * ``master.py``
   
-  limits itself to 16 MB RAM.  You have to edit it to select whether to
-  launch ``child.py`` or not:
+    limits itself to 16 MB RAM.  You have to edit it to select whether to
+    launch ``child.py`` or not:
   
-    * ``master.py`` exits correctly with ``MemoryError``
-       when limiting its own memory use
-    * ``master.py`` limits the memory use of its subprocess ``child.py``,
-       causing it to trigger a ``MemoryError``, which can be caught at the
-       ``master.py`` level
+   * ``master.py`` exits correctly with ``MemoryError``
+     when limiting its own memory use
+   * ``master.py`` limits the memory use of its subprocess ``child.py``,
+     causing it to trigger a ``MemoryError``, which can be caught at the
+     ``master.py`` level
 
 Notes
 -----
